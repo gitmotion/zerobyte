@@ -33,6 +33,27 @@ const calculateNextRun = (cronExpression: string): number => {
 	}
 };
 
+const processPattern = (pattern: string, volumePath: string): string => {
+	let isNegated = false;
+	let p = pattern;
+
+	if (p.startsWith("!")) {
+		isNegated = true;
+		p = p.slice(1);
+	}
+
+	if (p.startsWith(volumePath)) {
+		return pattern;
+	}
+
+	if (p.startsWith("/")) {
+		const processed = path.join(volumePath, p.slice(1));
+		return isNegated ? `!${processed}` : processed;
+	}
+
+	return pattern;
+};
+
 const listSchedules = async () => {
 	const schedules = await db.query.backupSchedulesTable.findMany({
 		with: {
@@ -259,16 +280,7 @@ const executeBackup = async (scheduleId: number, manual = false) => {
 		};
 
 		if (schedule.excludePatterns && schedule.excludePatterns.length > 0) {
-			const excludePatterns = [];
-			for (const pattern of schedule.excludePatterns) {
-				if (!pattern.startsWith(volumePath)) {
-					excludePatterns.push(path.join(volumePath, pattern));
-				} else {
-					excludePatterns.push(pattern);
-				}
-			}
-
-			backupOptions.exclude = excludePatterns;
+			backupOptions.exclude = schedule.excludePatterns.map((p) => processPattern(p, volumePath));
 		}
 
 		if (schedule.excludeIfPresent && schedule.excludeIfPresent.length > 0) {
@@ -276,16 +288,7 @@ const executeBackup = async (scheduleId: number, manual = false) => {
 		}
 
 		if (schedule.includePatterns && schedule.includePatterns.length > 0) {
-			const includePatterns = [];
-			for (const pattern of schedule.includePatterns) {
-				if (!pattern.startsWith(volumePath)) {
-					includePatterns.push(path.join(volumePath, pattern));
-				} else {
-					includePatterns.push(pattern);
-				}
-			}
-
-			backupOptions.include = includePatterns;
+			backupOptions.include = schedule.includePatterns.map((p) => processPattern(p, volumePath));
 		}
 
 		const releaseBackupLock = await repoMutex.acquireShared(repository.id, `backup:${volume.name}`);

@@ -21,15 +21,17 @@ afterEach(() => {
 });
 
 describe("executeBackup - include / exclude patterns", () => {
-	test("should correctly build include and exclude patterns by joining with volume path", async () => {
+	test("should correctly build include and exclude patterns", async () => {
 		// arrange
 		const volume = await createTestVolume();
 		const repository = await createTestRepository();
+		const volumePath = getVolumePath(volume);
+
 		const schedule = await createTestBackupSchedule({
 			volumeId: volume.id,
 			repositoryId: repository.id,
-			includePatterns: ["include1", "subdir/include2"],
-			excludePatterns: ["exclude1", "subdir/exclude2"],
+			includePatterns: ["*.zip", "/Photos", "!/Temp", "!*.log"],
+			excludePatterns: [".DS_Store", "/Config", "!/Important", "!*.tmp"],
 			excludeIfPresent: [".nobackup"],
 		});
 
@@ -37,14 +39,12 @@ describe("executeBackup - include / exclude patterns", () => {
 		await backupsService.executeBackup(schedule.id);
 
 		// assert
-		const volumePath = getVolumePath(volume);
-
 		expect(backupMock).toHaveBeenCalledWith(
 			expect.anything(),
 			volumePath,
 			expect.objectContaining({
-				include: [path.join(volumePath, "include1"), path.join(volumePath, "subdir/include2")],
-				exclude: [path.join(volumePath, "exclude1"), path.join(volumePath, "subdir/exclude2")],
+				include: ["*.zip", path.join(volumePath, "Photos"), `!${path.join(volumePath, "Temp")}`, "!*.log"],
+				exclude: [".DS_Store", path.join(volumePath, "Config"), `!${path.join(volumePath, "Important")}`, "!*.tmp"],
 				excludeIfPresent: [".nobackup"],
 			}),
 		);
@@ -88,11 +88,12 @@ describe("executeBackup - include / exclude patterns", () => {
 
 		const alreadyJoinedInclude = path.join(volumePath, "already/joined");
 		const relativeInclude = "relative/include";
+		const anchoredInclude = "/anchored/include";
 
 		const schedule = await createTestBackupSchedule({
 			volumeId: volume.id,
 			repositoryId: repository.id,
-			includePatterns: [alreadyJoinedInclude, relativeInclude],
+			includePatterns: [alreadyJoinedInclude, relativeInclude, anchoredInclude],
 		});
 
 		// act
@@ -103,7 +104,7 @@ describe("executeBackup - include / exclude patterns", () => {
 			expect.anything(),
 			volumePath,
 			expect.objectContaining({
-				include: [alreadyJoinedInclude, path.join(volumePath, relativeInclude)],
+				include: [alreadyJoinedInclude, relativeInclude, path.join(volumePath, "anchored/include")],
 			}),
 		);
 	});

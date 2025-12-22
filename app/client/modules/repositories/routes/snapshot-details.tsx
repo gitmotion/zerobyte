@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { redirect, useParams } from "react-router";
-import { listSnapshotFilesOptions } from "~/client/api-client/@tanstack/react-query.gen";
+import { redirect, useParams, Link } from "react-router";
+import { listBackupSchedulesOptions, listSnapshotFilesOptions } from "~/client/api-client/@tanstack/react-query.gen";
 import { Card, CardContent, CardHeader, CardTitle } from "~/client/components/ui/card";
 import { SnapshotFileBrowser } from "~/client/modules/backups/components/snapshot-file-browser";
 import { getSnapshotDetails } from "~/client/api-client";
@@ -47,6 +47,13 @@ export default function SnapshotDetailsPage({ loaderData }: Route.ComponentProps
 		enabled: !!name && !!snapshotId,
 	});
 
+	const schedules = useQuery({
+		...listBackupSchedulesOptions(),
+	});
+
+	const backupIds = loaderData.tags.map(Number).filter((tag) => !Number.isNaN(tag));
+	const backup = schedules.data?.find((b) => backupIds.includes(b.id));
+
 	if (!name || !snapshotId) {
 		return (
 			<div className="flex items-center justify-center h-full">
@@ -89,6 +96,26 @@ export default function SnapshotDetailsPage({ loaderData }: Route.ComponentProps
 								<span className="text-muted-foreground">Time:</span>
 								<p>{new Date(data.snapshot.time).toLocaleString()}</p>
 							</div>
+							{backup && (
+								<>
+									<div>
+										<span className="text-muted-foreground">Backup Schedule:</span>
+										<p>
+											<Link to={`/backups/${backup.id}`} className="text-primary hover:underline">
+												{backup.name}
+											</Link>
+										</p>
+									</div>
+									<div>
+										<span className="text-muted-foreground">Volume:</span>
+										<p>
+											<Link to={`/volumes/${backup.volume.name}`} className="text-primary hover:underline">
+												{backup.volume.name}
+											</Link>
+										</p>
+									</div>
+								</>
+							)}
 							<div className="col-span-2">
 								<span className="text-muted-foreground">Paths:</span>
 								<div className="space-y-1 mt-1">

@@ -55,7 +55,7 @@ export const ntfyNotificationConfigSchema = type({
 	priority: "'max' | 'high' | 'default' | 'low' | 'min'",
 	username: "string?",
 	password: "string?",
-	accessToken:"string?",
+	accessToken: "string?",
 });
 
 export const pushoverNotificationConfigSchema = type({

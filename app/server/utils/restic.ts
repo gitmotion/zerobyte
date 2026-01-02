@@ -155,6 +155,15 @@ export const buildEnv = async (config: RepositoryConfig) => {
 			if (config.password) {
 				env.RESTIC_REST_PASSWORD = await cryptoUtils.resolveSecret(config.password);
 			}
+			if (config.cacert) {
+				const decryptedCert = await cryptoUtils.resolveSecret(config.cacert);
+				const certPath = path.join("/tmp", `zerobyte-cacert-${crypto.randomBytes(8).toString("hex")}.pem`);
+				await fs.writeFile(certPath, decryptedCert, { mode: 0o600 });
+				env.RESTIC_CACERT = certPath;
+			}
+			if (config.insecureTls) {
+				env._REST_INSECURE_TLS = "true";
+			}
 			break;
 		}
 		case "sftp": {
@@ -846,8 +855,8 @@ const copy = async (
 
 	const res = await safeSpawn({ command: "restic", args, env });
 
-	await cleanupTemporaryKeys(sourceConfig, sourceEnv);
-	await cleanupTemporaryKeys(destConfig, destEnv);
+	await cleanupTemporaryKeys(sourceEnv);
+	await cleanupTemporaryKeys(destEnv);
 
 	const { stdout, stderr } = res;
 
@@ -863,18 +872,25 @@ const copy = async (
 	};
 };
 
-export const cleanupTemporaryKeys = async (config: RepositoryConfig, env: Record<string, string>) => {
-	if (config.backend === "sftp") {
-		if (env._SFTP_KEY_PATH) {
-			await fs.unlink(env._SFTP_KEY_PATH).catch(() => {});
-		}
-		if (env._SFTP_KNOWN_HOSTS_PATH) {
-			await fs.unlink(env._SFTP_KNOWN_HOSTS_PATH).catch(() => {});
-		}
-	} else if (config.isExistingRepository && config.customPassword && env.RESTIC_PASSWORD_FILE) {
+export const cleanupTemporaryKeys = async (env: Record<string, string>) => {
+	if (env._SFTP_KEY_PATH) {
+		await fs.unlink(env._SFTP_KEY_PATH).catch(() => {});
+	}
+
+	if (env._SFTP_KNOWN_HOSTS_PATH) {
+		await fs.unlink(env._SFTP_KNOWN_HOSTS_PATH).catch(() => {});
+	}
+
+	if (env.RESTIC_PASSWORD_FILE) {
 		await fs.unlink(env.RESTIC_PASSWORD_FILE).catch(() => {});
-	} else if (config.backend === "gcs" && env.GOOGLE_APPLICATION_CREDENTIALS) {
+	}
+
+	if (env.GOOGLE_APPLICATION_CREDENTIALS) {
 		await fs.unlink(env.GOOGLE_APPLICATION_CREDENTIALS).catch(() => {});
+	}
+
+	if (env.RESTIC_CACERT) {
+		await fs.unlink(env.RESTIC_CACERT).catch(() => {});
 	}
 };
 
@@ -883,6 +899,10 @@ export const addCommonArgs = (args: string[], env: Record<string, string>) => {
 
 	if (env._SFTP_SSH_ARGS) {
 		args.push("-o", `sftp.args=${env._SFTP_SSH_ARGS}`);
+	}
+
+	if (env._REST_INSECURE_TLS === "true") {
+		args.push("--insecure-tls");
 	}
 };
 

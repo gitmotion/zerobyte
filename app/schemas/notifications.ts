@@ -8,6 +8,7 @@ export const NOTIFICATION_TYPES = {
 	ntfy: "ntfy",
 	pushover: "pushover",
 	telegram: "telegram",
+	generic: "generic",
 	custom: "custom",
 } as const;
 
@@ -55,6 +56,7 @@ export const ntfyNotificationConfigSchema = type({
 	priority: "'max' | 'high' | 'default' | 'low' | 'min'",
 	username: "string?",
 	password: "string?",
+	accessToken: "string?",
 });
 
 export const pushoverNotificationConfigSchema = type({
@@ -71,6 +73,17 @@ export const telegramNotificationConfigSchema = type({
 	chatId: "string",
 });
 
+export const genericNotificationConfigSchema = type({
+	type: "'generic'",
+	url: "string",
+	method: "'GET' | 'POST'",
+	contentType: "string?",
+	headers: "string[]?",
+	useJson: "boolean?",
+	titleKey: "string?",
+	messageKey: "string?",
+});
+
 export const customNotificationConfigSchema = type({
 	type: "'custom'",
 	shoutrrrUrl: "string",
@@ -83,6 +96,7 @@ export const notificationConfigSchemaBase = emailNotificationConfigSchema
 	.or(ntfyNotificationConfigSchema)
 	.or(pushoverNotificationConfigSchema)
 	.or(telegramNotificationConfigSchema)
+	.or(genericNotificationConfigSchema)
 	.or(customNotificationConfigSchema);
 
 export const notificationConfigSchema = notificationConfigSchemaBase.onUndeclaredKey("delete");

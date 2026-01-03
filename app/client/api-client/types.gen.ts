@@ -170,6 +170,17 @@ export type ListVolumesResponses = {
             remote: string;
             readOnly?: boolean;
         } | {
+            backend: 'sftp';
+            host: string;
+            path: string;
+            username: string;
+            port?: number;
+            skipHostKeyCheck?: boolean;
+            knownHosts?: string;
+            password?: string;
+            privateKey?: string;
+            readOnly?: boolean;
+        } | {
             backend: 'smb';
             password: string;
             server: string;
@@ -196,7 +207,7 @@ export type ListVolumesResponses = {
         name: string;
         shortId: string;
         status: 'error' | 'mounted' | 'unmounted';
-        type: 'directory' | 'nfs' | 'rclone' | 'smb' | 'webdav';
+        type: 'directory' | 'nfs' | 'rclone' | 'sftp' | 'smb' | 'webdav';
         updatedAt: number;
     }>;
 };
@@ -220,6 +231,17 @@ export type CreateVolumeData = {
             backend: 'rclone';
             path: string;
             remote: string;
+            readOnly?: boolean;
+        } | {
+            backend: 'sftp';
+            host: string;
+            path: string;
+            username: string;
+            port?: number;
+            skipHostKeyCheck?: boolean;
+            knownHosts?: string;
+            password?: string;
+            privateKey?: string;
             readOnly?: boolean;
         } | {
             backend: 'smb';
@@ -271,6 +293,17 @@ export type CreateVolumeResponses = {
             remote: string;
             readOnly?: boolean;
         } | {
+            backend: 'sftp';
+            host: string;
+            path: string;
+            username: string;
+            port?: number;
+            skipHostKeyCheck?: boolean;
+            knownHosts?: string;
+            password?: string;
+            privateKey?: string;
+            readOnly?: boolean;
+        } | {
             backend: 'smb';
             password: string;
             server: string;
@@ -297,7 +330,7 @@ export type CreateVolumeResponses = {
         name: string;
         shortId: string;
         status: 'error' | 'mounted' | 'unmounted';
-        type: 'directory' | 'nfs' | 'rclone' | 'smb' | 'webdav';
+        type: 'directory' | 'nfs' | 'rclone' | 'sftp' | 'smb' | 'webdav';
         updatedAt: number;
     };
 };
@@ -321,6 +354,17 @@ export type TestConnectionData = {
             backend: 'rclone';
             path: string;
             remote: string;
+            readOnly?: boolean;
+        } | {
+            backend: 'sftp';
+            host: string;
+            path: string;
+            username: string;
+            port?: number;
+            skipHostKeyCheck?: boolean;
+            knownHosts?: string;
+            password?: string;
+            privateKey?: string;
             readOnly?: boolean;
         } | {
             backend: 'smb';
@@ -425,6 +469,17 @@ export type GetVolumeResponses = {
                 remote: string;
                 readOnly?: boolean;
             } | {
+                backend: 'sftp';
+                host: string;
+                path: string;
+                username: string;
+                port?: number;
+                skipHostKeyCheck?: boolean;
+                knownHosts?: string;
+                password?: string;
+                privateKey?: string;
+                readOnly?: boolean;
+            } | {
                 backend: 'smb';
                 password: string;
                 server: string;
@@ -451,7 +506,7 @@ export type GetVolumeResponses = {
             name: string;
             shortId: string;
             status: 'error' | 'mounted' | 'unmounted';
-            type: 'directory' | 'nfs' | 'rclone' | 'smb' | 'webdav';
+            type: 'directory' | 'nfs' | 'rclone' | 'sftp' | 'smb' | 'webdav';
             updatedAt: number;
         };
     };
@@ -477,6 +532,17 @@ export type UpdateVolumeData = {
             backend: 'rclone';
             path: string;
             remote: string;
+            readOnly?: boolean;
+        } | {
+            backend: 'sftp';
+            host: string;
+            path: string;
+            username: string;
+            port?: number;
+            skipHostKeyCheck?: boolean;
+            knownHosts?: string;
+            password?: string;
+            privateKey?: string;
             readOnly?: boolean;
         } | {
             backend: 'smb';
@@ -537,6 +603,17 @@ export type UpdateVolumeResponses = {
             remote: string;
             readOnly?: boolean;
         } | {
+            backend: 'sftp';
+            host: string;
+            path: string;
+            username: string;
+            port?: number;
+            skipHostKeyCheck?: boolean;
+            knownHosts?: string;
+            password?: string;
+            privateKey?: string;
+            readOnly?: boolean;
+        } | {
             backend: 'smb';
             password: string;
             server: string;
@@ -563,7 +640,7 @@ export type UpdateVolumeResponses = {
         name: string;
         shortId: string;
         status: 'error' | 'mounted' | 'unmounted';
-        type: 'directory' | 'nfs' | 'rclone' | 'smb' | 'webdav';
+        type: 'directory' | 'nfs' | 'rclone' | 'sftp' | 'smb' | 'webdav';
         updatedAt: number;
     };
 };
@@ -761,7 +838,9 @@ export type ListRepositoriesResponses = {
         } | {
             backend: 'rest';
             url: string;
+            cacert?: string;
             customPassword?: string;
+            insecureTls?: boolean;
             isExistingRepository?: boolean;
             password?: string;
             path?: string;
@@ -773,8 +852,10 @@ export type ListRepositoriesResponses = {
             privateKey: string;
             user: string;
             port?: number;
+            skipHostKeyCheck?: boolean;
             customPassword?: string;
             isExistingRepository?: boolean;
+            knownHosts?: string;
         };
         createdAt: number;
         id: string;
@@ -838,7 +919,9 @@ export type CreateRepositoryData = {
         } | {
             backend: 'rest';
             url: string;
+            cacert?: string;
             customPassword?: string;
+            insecureTls?: boolean;
             isExistingRepository?: boolean;
             password?: string;
             path?: string;
@@ -850,8 +933,10 @@ export type CreateRepositoryData = {
             privateKey: string;
             user: string;
             port?: number;
+            skipHostKeyCheck?: boolean;
             customPassword?: string;
             isExistingRepository?: boolean;
+            knownHosts?: string;
         };
         name: string;
         compressionMode?: 'auto' | 'max' | 'off';
@@ -977,7 +1062,9 @@ export type GetRepositoryResponses = {
         } | {
             backend: 'rest';
             url: string;
+            cacert?: string;
             customPassword?: string;
+            insecureTls?: boolean;
             isExistingRepository?: boolean;
             password?: string;
             path?: string;
@@ -989,8 +1076,10 @@ export type GetRepositoryResponses = {
             privateKey: string;
             user: string;
             port?: number;
+            skipHostKeyCheck?: boolean;
             customPassword?: string;
             isExistingRepository?: boolean;
+            knownHosts?: string;
         };
         createdAt: number;
         id: string;
@@ -1081,7 +1170,9 @@ export type UpdateRepositoryResponses = {
         } | {
             backend: 'rest';
             url: string;
+            cacert?: string;
             customPassword?: string;
+            insecureTls?: boolean;
             isExistingRepository?: boolean;
             password?: string;
             path?: string;
@@ -1093,8 +1184,10 @@ export type UpdateRepositoryResponses = {
             privateKey: string;
             user: string;
             port?: number;
+            skipHostKeyCheck?: boolean;
             customPassword?: string;
             isExistingRepository?: boolean;
+            knownHosts?: string;
         };
         createdAt: number;
         id: string;
@@ -1109,6 +1202,28 @@ export type UpdateRepositoryResponses = {
 };
 
 export type UpdateRepositoryResponse = UpdateRepositoryResponses[keyof UpdateRepositoryResponses];
+
+export type DeleteSnapshotsData = {
+    body?: {
+        snapshotIds: Array<string>;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/repositories/{id}/snapshots';
+};
+
+export type DeleteSnapshotsResponses = {
+    /**
+     * Snapshots deleted successfully
+     */
+    200: {
+        message: string;
+    };
+};
+
+export type DeleteSnapshotsResponse = DeleteSnapshotsResponses[keyof DeleteSnapshotsResponses];
 
 export type ListSnapshotsData = {
     body?: never;
@@ -1282,6 +1397,31 @@ export type DoctorRepositoryResponses = {
 
 export type DoctorRepositoryResponse = DoctorRepositoryResponses[keyof DoctorRepositoryResponses];
 
+export type TagSnapshotsData = {
+    body?: {
+        snapshotIds: Array<string>;
+        add?: Array<string>;
+        remove?: Array<string>;
+        set?: Array<string>;
+    };
+    path: {
+        id: string;
+    };
+    query?: never;
+    url: '/api/v1/repositories/{id}/snapshots/tag';
+};
+
+export type TagSnapshotsResponses = {
+    /**
+     * Snapshots tagged successfully
+     */
+    200: {
+        message: string;
+    };
+};
+
+export type TagSnapshotsResponse = TagSnapshotsResponses[keyof TagSnapshotsResponses];
+
 export type ListBackupSchedulesData = {
     body?: never;
     path?: never;
@@ -1355,7 +1495,9 @@ export type ListBackupSchedulesResponses = {
             } | {
                 backend: 'rest';
                 url: string;
+                cacert?: string;
                 customPassword?: string;
+                insecureTls?: boolean;
                 isExistingRepository?: boolean;
                 password?: string;
                 path?: string;
@@ -1367,8 +1509,10 @@ export type ListBackupSchedulesResponses = {
                 privateKey: string;
                 user: string;
                 port?: number;
+                skipHostKeyCheck?: boolean;
                 customPassword?: string;
                 isExistingRepository?: boolean;
+                knownHosts?: string;
             };
             createdAt: number;
             id: string;
@@ -1390,6 +1534,7 @@ export type ListBackupSchedulesResponses = {
             keepWithinDuration?: string;
             keepYearly?: number;
         } | null;
+        shortId: string;
         updatedAt: number;
         volume: {
             autoRemount: boolean;
@@ -1408,6 +1553,17 @@ export type ListBackupSchedulesResponses = {
                 backend: 'rclone';
                 path: string;
                 remote: string;
+                readOnly?: boolean;
+            } | {
+                backend: 'sftp';
+                host: string;
+                path: string;
+                username: string;
+                port?: number;
+                skipHostKeyCheck?: boolean;
+                knownHosts?: string;
+                password?: string;
+                privateKey?: string;
                 readOnly?: boolean;
             } | {
                 backend: 'smb';
@@ -1436,7 +1592,7 @@ export type ListBackupSchedulesResponses = {
             name: string;
             shortId: string;
             status: 'error' | 'mounted' | 'unmounted';
-            type: 'directory' | 'nfs' | 'rclone' | 'smb' | 'webdav';
+            type: 'directory' | 'nfs' | 'rclone' | 'sftp' | 'smb' | 'webdav';
             updatedAt: number;
         };
         volumeId: number;
@@ -1500,6 +1656,7 @@ export type CreateBackupScheduleResponses = {
             keepWithinDuration?: string;
             keepYearly?: number;
         } | null;
+        shortId: string;
         updatedAt: number;
         volumeId: number;
     };
@@ -1602,7 +1759,9 @@ export type GetBackupScheduleResponses = {
             } | {
                 backend: 'rest';
                 url: string;
+                cacert?: string;
                 customPassword?: string;
+                insecureTls?: boolean;
                 isExistingRepository?: boolean;
                 password?: string;
                 path?: string;
@@ -1614,8 +1773,10 @@ export type GetBackupScheduleResponses = {
                 privateKey: string;
                 user: string;
                 port?: number;
+                skipHostKeyCheck?: boolean;
                 customPassword?: string;
                 isExistingRepository?: boolean;
+                knownHosts?: string;
             };
             createdAt: number;
             id: string;
@@ -1637,6 +1798,7 @@ export type GetBackupScheduleResponses = {
             keepWithinDuration?: string;
             keepYearly?: number;
         } | null;
+        shortId: string;
         updatedAt: number;
         volume: {
             autoRemount: boolean;
@@ -1655,6 +1817,17 @@ export type GetBackupScheduleResponses = {
                 backend: 'rclone';
                 path: string;
                 remote: string;
+                readOnly?: boolean;
+            } | {
+                backend: 'sftp';
+                host: string;
+                path: string;
+                username: string;
+                port?: number;
+                skipHostKeyCheck?: boolean;
+                knownHosts?: string;
+                password?: string;
+                privateKey?: string;
                 readOnly?: boolean;
             } | {
                 backend: 'smb';
@@ -1683,7 +1856,7 @@ export type GetBackupScheduleResponses = {
             name: string;
             shortId: string;
             status: 'error' | 'mounted' | 'unmounted';
-            type: 'directory' | 'nfs' | 'rclone' | 'smb' | 'webdav';
+            type: 'directory' | 'nfs' | 'rclone' | 'sftp' | 'smb' | 'webdav';
             updatedAt: number;
         };
         volumeId: number;
@@ -1748,6 +1921,7 @@ export type UpdateBackupScheduleResponses = {
             keepWithinDuration?: string;
             keepYearly?: number;
         } | null;
+        shortId: string;
         updatedAt: number;
         volumeId: number;
     };
@@ -1830,7 +2004,9 @@ export type GetBackupScheduleForVolumeResponses = {
             } | {
                 backend: 'rest';
                 url: string;
+                cacert?: string;
                 customPassword?: string;
+                insecureTls?: boolean;
                 isExistingRepository?: boolean;
                 password?: string;
                 path?: string;
@@ -1842,8 +2018,10 @@ export type GetBackupScheduleForVolumeResponses = {
                 privateKey: string;
                 user: string;
                 port?: number;
+                skipHostKeyCheck?: boolean;
                 customPassword?: string;
                 isExistingRepository?: boolean;
+                knownHosts?: string;
             };
             createdAt: number;
             id: string;
@@ -1865,6 +2043,7 @@ export type GetBackupScheduleForVolumeResponses = {
             keepWithinDuration?: string;
             keepYearly?: number;
         } | null;
+        shortId: string;
         updatedAt: number;
         volume: {
             autoRemount: boolean;
@@ -1883,6 +2062,17 @@ export type GetBackupScheduleForVolumeResponses = {
                 backend: 'rclone';
                 path: string;
                 remote: string;
+                readOnly?: boolean;
+            } | {
+                backend: 'sftp';
+                host: string;
+                path: string;
+                username: string;
+                port?: number;
+                skipHostKeyCheck?: boolean;
+                knownHosts?: string;
+                password?: string;
+                privateKey?: string;
                 readOnly?: boolean;
             } | {
                 backend: 'smb';
@@ -1911,7 +2101,7 @@ export type GetBackupScheduleForVolumeResponses = {
             name: string;
             shortId: string;
             status: 'error' | 'mounted' | 'unmounted';
-            type: 'directory' | 'nfs' | 'rclone' | 'smb' | 'webdav';
+            type: 'directory' | 'nfs' | 'rclone' | 'sftp' | 'smb' | 'webdav';
             updatedAt: number;
         };
         volumeId: number;
@@ -2023,9 +2213,19 @@ export type GetScheduleNotificationsResponses = {
                 password?: string;
                 username?: string;
             } | {
+                method: 'GET' | 'POST';
+                type: 'generic';
+                url: string;
+                contentType?: string;
+                headers?: Array<string>;
+                messageKey?: string;
+                titleKey?: string;
+                useJson?: boolean;
+            } | {
                 priority: 'default' | 'high' | 'low' | 'max' | 'min';
                 topic: string;
                 type: 'ntfy';
+                accessToken?: string;
                 password?: string;
                 serverUrl?: string;
                 username?: string;
@@ -2055,7 +2255,7 @@ export type GetScheduleNotificationsResponses = {
             enabled: boolean;
             id: number;
             name: string;
-            type: 'custom' | 'discord' | 'email' | 'gotify' | 'ntfy' | 'pushover' | 'slack' | 'telegram';
+            type: 'custom' | 'discord' | 'email' | 'generic' | 'gotify' | 'ntfy' | 'pushover' | 'slack' | 'telegram';
             updatedAt: number;
         };
         destinationId: number;
@@ -2113,9 +2313,19 @@ export type UpdateScheduleNotificationsResponses = {
                 password?: string;
                 username?: string;
             } | {
+                method: 'GET' | 'POST';
+                type: 'generic';
+                url: string;
+                contentType?: string;
+                headers?: Array<string>;
+                messageKey?: string;
+                titleKey?: string;
+                useJson?: boolean;
+            } | {
                 priority: 'default' | 'high' | 'low' | 'max' | 'min';
                 topic: string;
                 type: 'ntfy';
+                accessToken?: string;
                 password?: string;
                 serverUrl?: string;
                 username?: string;
@@ -2145,7 +2355,7 @@ export type UpdateScheduleNotificationsResponses = {
             enabled: boolean;
             id: number;
             name: string;
-            type: 'custom' | 'discord' | 'email' | 'gotify' | 'ntfy' | 'pushover' | 'slack' | 'telegram';
+            type: 'custom' | 'discord' | 'email' | 'generic' | 'gotify' | 'ntfy' | 'pushover' | 'slack' | 'telegram';
             updatedAt: number;
         };
         destinationId: number;
@@ -2226,7 +2436,9 @@ export type GetScheduleMirrorsResponses = {
             } | {
                 backend: 'rest';
                 url: string;
+                cacert?: string;
                 customPassword?: string;
+                insecureTls?: boolean;
                 isExistingRepository?: boolean;
                 password?: string;
                 path?: string;
@@ -2238,8 +2450,10 @@ export type GetScheduleMirrorsResponses = {
                 privateKey: string;
                 user: string;
                 port?: number;
+                skipHostKeyCheck?: boolean;
                 customPassword?: string;
                 isExistingRepository?: boolean;
+                knownHosts?: string;
             };
             createdAt: number;
             id: string;
@@ -2330,7 +2544,9 @@ export type UpdateScheduleMirrorsResponses = {
             } | {
                 backend: 'rest';
                 url: string;
+                cacert?: string;
                 customPassword?: string;
+                insecureTls?: boolean;
                 isExistingRepository?: boolean;
                 password?: string;
                 path?: string;
@@ -2342,8 +2558,10 @@ export type UpdateScheduleMirrorsResponses = {
                 privateKey: string;
                 user: string;
                 port?: number;
+                skipHostKeyCheck?: boolean;
                 customPassword?: string;
                 isExistingRepository?: boolean;
+                knownHosts?: string;
             };
             createdAt: number;
             id: string;
@@ -2436,9 +2654,19 @@ export type ListNotificationDestinationsResponses = {
             password?: string;
             username?: string;
         } | {
+            method: 'GET' | 'POST';
+            type: 'generic';
+            url: string;
+            contentType?: string;
+            headers?: Array<string>;
+            messageKey?: string;
+            titleKey?: string;
+            useJson?: boolean;
+        } | {
             priority: 'default' | 'high' | 'low' | 'max' | 'min';
             topic: string;
             type: 'ntfy';
+            accessToken?: string;
             password?: string;
             serverUrl?: string;
             username?: string;
@@ -2468,7 +2696,7 @@ export type ListNotificationDestinationsResponses = {
         enabled: boolean;
         id: number;
         name: string;
-        type: 'custom' | 'discord' | 'email' | 'gotify' | 'ntfy' | 'pushover' | 'slack' | 'telegram';
+        type: 'custom' | 'discord' | 'email' | 'generic' | 'gotify' | 'ntfy' | 'pushover' | 'slack' | 'telegram';
         updatedAt: number;
     }>;
 };
@@ -2497,9 +2725,19 @@ export type CreateNotificationDestinationData = {
             password?: string;
             username?: string;
         } | {
+            method: 'GET' | 'POST';
+            type: 'generic';
+            url: string;
+            contentType?: string;
+            headers?: Array<string>;
+            messageKey?: string;
+            titleKey?: string;
+            useJson?: boolean;
+        } | {
             priority: 'default' | 'high' | 'low' | 'max' | 'min';
             topic: string;
             type: 'ntfy';
+            accessToken?: string;
             password?: string;
             serverUrl?: string;
             username?: string;
@@ -2557,9 +2795,19 @@ export type CreateNotificationDestinationResponses = {
             password?: string;
             username?: string;
         } | {
+            method: 'GET' | 'POST';
+            type: 'generic';
+            url: string;
+            contentType?: string;
+            headers?: Array<string>;
+            messageKey?: string;
+            titleKey?: string;
+            useJson?: boolean;
+        } | {
             priority: 'default' | 'high' | 'low' | 'max' | 'min';
             topic: string;
             type: 'ntfy';
+            accessToken?: string;
             password?: string;
             serverUrl?: string;
             username?: string;
@@ -2589,7 +2837,7 @@ export type CreateNotificationDestinationResponses = {
         enabled: boolean;
         id: number;
         name: string;
-        type: 'custom' | 'discord' | 'email' | 'gotify' | 'ntfy' | 'pushover' | 'slack' | 'telegram';
+        type: 'custom' | 'discord' | 'email' | 'generic' | 'gotify' | 'ntfy' | 'pushover' | 'slack' | 'telegram';
         updatedAt: number;
     };
 };
@@ -2664,9 +2912,19 @@ export type GetNotificationDestinationResponses = {
             password?: string;
             username?: string;
         } | {
+            method: 'GET' | 'POST';
+            type: 'generic';
+            url: string;
+            contentType?: string;
+            headers?: Array<string>;
+            messageKey?: string;
+            titleKey?: string;
+            useJson?: boolean;
+        } | {
             priority: 'default' | 'high' | 'low' | 'max' | 'min';
             topic: string;
             type: 'ntfy';
+            accessToken?: string;
             password?: string;
             serverUrl?: string;
             username?: string;
@@ -2696,7 +2954,7 @@ export type GetNotificationDestinationResponses = {
         enabled: boolean;
         id: number;
         name: string;
-        type: 'custom' | 'discord' | 'email' | 'gotify' | 'ntfy' | 'pushover' | 'slack' | 'telegram';
+        type: 'custom' | 'discord' | 'email' | 'generic' | 'gotify' | 'ntfy' | 'pushover' | 'slack' | 'telegram';
         updatedAt: number;
     };
 };
@@ -2725,9 +2983,19 @@ export type UpdateNotificationDestinationData = {
             password?: string;
             username?: string;
         } | {
+            method: 'GET' | 'POST';
+            type: 'generic';
+            url: string;
+            contentType?: string;
+            headers?: Array<string>;
+            messageKey?: string;
+            titleKey?: string;
+            useJson?: boolean;
+        } | {
             priority: 'default' | 'high' | 'low' | 'max' | 'min';
             topic: string;
             type: 'ntfy';
+            accessToken?: string;
             password?: string;
             serverUrl?: string;
             username?: string;
@@ -2795,9 +3063,19 @@ export type UpdateNotificationDestinationResponses = {
             password?: string;
             username?: string;
         } | {
+            method: 'GET' | 'POST';
+            type: 'generic';
+            url: string;
+            contentType?: string;
+            headers?: Array<string>;
+            messageKey?: string;
+            titleKey?: string;
+            useJson?: boolean;
+        } | {
             priority: 'default' | 'high' | 'low' | 'max' | 'min';
             topic: string;
             type: 'ntfy';
+            accessToken?: string;
             password?: string;
             serverUrl?: string;
             username?: string;
@@ -2827,7 +3105,7 @@ export type UpdateNotificationDestinationResponses = {
         enabled: boolean;
         id: number;
         name: string;
-        type: 'custom' | 'discord' | 'email' | 'gotify' | 'ntfy' | 'pushover' | 'slack' | 'telegram';
+        type: 'custom' | 'discord' | 'email' | 'generic' | 'gotify' | 'ntfy' | 'pushover' | 'slack' | 'telegram';
         updatedAt: number;
     };
 };

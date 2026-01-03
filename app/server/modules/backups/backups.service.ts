@@ -14,6 +14,7 @@ import { notificationsService } from "../notifications/notifications.service";
 import { repoMutex } from "../../core/repository-mutex";
 import { checkMirrorCompatibility, getIncompatibleMirrorError } from "~/server/utils/backend-compatibility";
 import path from "node:path";
+import { generateShortId } from "~/server/utils/id";
 
 const runningBackups = new Map<number, AbortController>();
 
@@ -126,6 +127,7 @@ const createSchedule = async (data: CreateBackupScheduleBody) => {
 			includePatterns: data.includePatterns ?? [],
 			oneFileSystem: data.oneFileSystem,
 			nextBackupAt: nextBackupAt,
+			shortId: generateShortId(),
 		})
 		.returning();
 
@@ -234,7 +236,7 @@ const executeBackup = async (scheduleId: number, manual = false) => {
 		throw new BadRequestError("Volume is not mounted");
 	}
 
-	logger.info(`Starting backup for volume ${volume.name} to repository ${repository.name}`);
+	logger.info(`Starting backup ${schedule.name} for volume ${volume.name} to repository ${repository.name}`);
 
 	serverEvents.emit("backup:started", {
 		scheduleId,
@@ -246,6 +248,7 @@ const executeBackup = async (scheduleId: number, manual = false) => {
 		.sendBackupNotification(scheduleId, "start", {
 			volumeName: volume.name,
 			repositoryName: repository.name,
+			scheduleName: schedule.name,
 		})
 		.catch((error) => {
 			logger.error(`Failed to send backup start notification: ${toMessage(error)}`);
@@ -277,7 +280,7 @@ const executeBackup = async (scheduleId: number, manual = false) => {
 			oneFileSystem?: boolean;
 			signal?: AbortSignal;
 		} = {
-			tags: [schedule.id.toString()],
+			tags: [schedule.shortId],
 			oneFileSystem: schedule.oneFileSystem,
 			signal: abortController.signal,
 		};
@@ -339,9 +342,13 @@ const executeBackup = async (scheduleId: number, manual = false) => {
 			.where(eq(backupSchedulesTable.id, scheduleId));
 
 		if (finalStatus === "warning") {
-			logger.warn(`Backup completed with warnings for volume ${volume.name} to repository ${repository.name}`);
+			logger.warn(
+				`Backup ${schedule.name} completed with warnings for volume ${volume.name} to repository ${repository.name}`,
+			);
 		} else {
-			logger.info(`Backup completed successfully for volume ${volume.name} to repository ${repository.name}`);
+			logger.info(
+				`Backup ${schedule.name} completed successfully for volume ${volume.name} to repository ${repository.name}`,
+			);
 		}
 
 		serverEvents.emit("backup:completed", {
@@ -355,12 +362,15 @@ const executeBackup = async (scheduleId: number, manual = false) => {
 			.sendBackupNotification(scheduleId, finalStatus === "success" ? "success" : "warning", {
 				volumeName: volume.name,
 				repositoryName: repository.name,
+				scheduleName: schedule.name,
 			})
 			.catch((error) => {
 				logger.error(`Failed to send backup success notification: ${toMessage(error)}`);
 			});
 	} catch (error) {
-		logger.error(`Backup failed for volume ${volume.name} to repository ${repository.name}: ${toMessage(error)}`);
+		logger.error(
+			`Backup ${schedule.name} failed for volume ${volume.name} to repository ${repository.name}: ${toMessage(error)}`,
+		);
 
 		await db
 			.update(backupSchedulesTable)
@@ -383,6 +393,7 @@ const executeBackup = async (scheduleId: number, manual = false) => {
 			.sendBackupNotification(scheduleId, "failure", {
 				volumeName: volume.name,
 				repositoryName: repository.name,
+				scheduleName: schedule.name,
 				error: toMessage(error),
 			})
 			.catch((notifError) => {
@@ -476,7 +487,7 @@ const runForget = async (scheduleId: number, repositoryId?: string) => {
 	logger.info(`running retention policy (forget) for schedule ${scheduleId}`);
 	const releaseLock = await repoMutex.acquireExclusive(repository.id, `forget:${scheduleId}`);
 	try {
-		await restic.forget(repository.config, schedule.retentionPolicy, { tag: schedule.id.toString() });
+		await restic.forget(repository.config, schedule.retentionPolicy, { tag: schedule.shortId });
 	} finally {
 		releaseLock();
 	}
@@ -570,6 +581,14 @@ const copyToMirrors = async (
 	sourceRepository: { id: string; config: (typeof repositoriesTable.$inferSelect)["config"] },
 	retentionPolicy: (typeof backupSchedulesTable.$inferSelect)["retentionPolicy"],
 ) => {
+	const schedule = await db.query.backupSchedulesTable.findFirst({
+		where: eq(backupSchedulesTable.id, scheduleId),
+	});
+
+	if (!schedule) {
+		throw new NotFoundError("Backup schedule not found");
+	}
+
 	const mirrors = await db.query.backupScheduleMirrorsTable.findMany({
 		where: eq(backupScheduleMirrorsTable.scheduleId, scheduleId),
 		with: { repository: true },
@@ -599,7 +618,7 @@ const copyToMirrors = async (
 			const releaseMirror = await repoMutex.acquireShared(mirror.repository.id, `mirror:${scheduleId}`);
 
 			try {
-				await restic.copy(sourceRepository.config, mirror.repository.config, { tag: scheduleId.toString() });
+				await restic.copy(sourceRepository.config, mirror.repository.config, { tag: schedule.shortId });
 			} finally {
 				releaseSource();
 				releaseMirror();

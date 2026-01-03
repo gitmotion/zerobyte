@@ -1,14 +1,13 @@
-import * as fs from "node:fs/promises";
-import * as path from "node:path";
 import { eq } from "drizzle-orm";
 import { db } from "../../db/db";
-import { repositoriesTable } from "../../db/schema";
-import { VOLUME_MOUNT_BASE, REPOSITORY_BASE } from "../../core/constants";
+import { backupScheduleMirrorsTable, repositoriesTable, type Repository } from "../../db/schema";
 import { logger } from "../../utils/logger";
 import { hasMigrationCheckpoint, recordMigrationCheckpoint } from "./checkpoint";
-import type { RepositoryConfig } from "~/schemas/restic";
+import { toMessage } from "~/server/utils/errors";
+import { safeSpawn } from "~/server/utils/spawn";
+import { addCommonArgs, buildEnv, buildRepoUrl, cleanupTemporaryKeys } from "~/server/utils/restic";
 
-const MIGRATION_VERSION = "v0.14.0";
+const MIGRATION_VERSION = "v0.21.1";
 
 interface MigrationResult {
 	success: boolean;
@@ -28,171 +27,110 @@ export class MigrationError extends Error {
 	}
 }
 
-export const migrateToShortIds = async () => {
+export const retagSnapshots = async () => {
 	const alreadyMigrated = await hasMigrationCheckpoint(MIGRATION_VERSION);
 	if (alreadyMigrated) {
 		logger.debug(`Migration ${MIGRATION_VERSION} already completed, skipping.`);
 		return;
 	}
 
-	logger.info(`Starting short ID migration (${MIGRATION_VERSION})...`);
+	logger.info(`Starting snapshots retagging migration (${MIGRATION_VERSION})...`);
 
-	const volumeResult = await migrateVolumeFolders();
-	const repoResult = await migrateRepositoryFolders();
-
-	const allErrors = [...volumeResult.errors, ...repoResult.errors];
+	const result = await migrateSnapshotsToShortIdTag();
+	const allErrors = [...result.errors];
 
 	if (allErrors.length > 0) {
+		logger.error(`Migration ${MIGRATION_VERSION} completed with errors: ${allErrors.length} items failed.`);
+		logger.error(
+			`Some snapshots could not be retagged. Please check the logs for details. Fix any repository in error state and re-start zerobyte to retry the migration for failed items.`,
+		);
 		for (const err of allErrors) {
 			logger.error(`Migration failure - ${err.name}: ${err.error}`);
 		}
-		throw new MigrationError(MIGRATION_VERSION, allErrors);
+
+		return;
 	}
 
 	await recordMigrationCheckpoint(MIGRATION_VERSION);
-
-	logger.info(`Short ID migration (${MIGRATION_VERSION}) complete.`);
+	logger.info(`Snapshots retagging migration (${MIGRATION_VERSION}) complete.`);
 };
 
-const migrateVolumeFolders = async (): Promise<MigrationResult> => {
+const migrateTag = async (
+	oldTag: string,
+	newTag: string,
+	repository: Repository,
+	scheduleName: string,
+): Promise<string | null> => {
+	const repoUrl = buildRepoUrl(repository.config);
+	const env = await buildEnv(repository.config);
+
+	const args = ["--repo", repoUrl, "tag", "--tag", oldTag, "--add", newTag, "--remove", oldTag];
+
+	addCommonArgs(args, env);
+
+	logger.info(`Migrating snapshots for schedule '${scheduleName}' from tag '${oldTag}' to '${newTag}'`);
+	const res = await safeSpawn({ command: "restic", args, env });
+	await cleanupTemporaryKeys(env);
+
+	if (res.exitCode !== 0) {
+		logger.error(`Restic tag failed: ${res.stderr}`);
+		return toMessage(res.stderr);
+	}
+
+	logger.info(`Migrated snapshots for schedule '${scheduleName}' from tag '${oldTag}' to '${newTag}'`);
+	return null;
+};
+
+const migrateSnapshotsToShortIdTag = async (): Promise<MigrationResult> => {
 	const errors: Array<{ name: string; error: string }> = [];
-	const volumes = await db.query.volumesTable.findMany({});
+	const backupSchedules = await db.query.backupSchedulesTable.findMany({});
 
-	for (const volume of volumes) {
-		if (volume.config.backend === "directory") {
-			continue;
-		}
+	for (const schedule of backupSchedules) {
+		try {
+			const oldTag = schedule.id.toString();
+			const newTag = schedule.shortId;
 
-		const oldPath = path.join(VOLUME_MOUNT_BASE, volume.name);
-		const newPath = path.join(VOLUME_MOUNT_BASE, volume.shortId);
+			const repository = await db.query.repositoriesTable.findFirst({
+				where: eq(repositoriesTable.id, schedule.repositoryId),
+			});
 
-		const oldExists = await pathExists(oldPath);
-		const newExists = await pathExists(newPath);
-
-		if (oldExists && !newExists) {
-			try {
-				logger.info(`Migrating volume folder: ${oldPath} -> ${newPath}`);
-				await fs.rename(oldPath, newPath);
-				logger.info(`Successfully migrated volume folder for "${volume.name}"`);
-			} catch (error) {
-				const errorMessage = error instanceof Error ? error.message : String(error);
-				errors.push({ name: `volume:${volume.name}`, error: errorMessage });
+			if (!repository) {
+				errors.push({ name: `schedule:${schedule.name}`, error: `Associated repository not found` });
+				continue;
 			}
-		} else if (oldExists && newExists) {
-			logger.warn(
-				`Both old (${oldPath}) and new (${newPath}) paths exist for volume "${volume.name}". Manual intervention may be required.`,
-			);
+
+			const error = await migrateTag(oldTag, newTag, repository, schedule.name);
+			if (error) {
+				errors.push({ name: `schedule:${schedule.name}`, error });
+				continue;
+			}
+
+			const mirrors = await db
+				.select()
+				.from(backupScheduleMirrorsTable)
+				.where(eq(backupScheduleMirrorsTable.scheduleId, schedule.id));
+
+			for (const mirror of mirrors) {
+				const mirrorRepo = await db.query.repositoriesTable.findFirst({
+					where: eq(repositoriesTable.id, mirror.repositoryId),
+				});
+
+				if (!mirrorRepo) {
+					errors.push({ name: `schedule-mirror:${schedule.name}`, error: `Associated mirror repository not found` });
+					continue;
+				}
+
+				const mirrorError = await migrateTag(oldTag, newTag, mirrorRepo, `${schedule.name} (mirror)`);
+				if (mirrorError) {
+					errors.push({ name: `schedule-mirror:${schedule.name}`, error: mirrorError });
+				}
+			}
+
+			logger.info(`Migrated snapshots for schedule '${schedule.name}' from tag '${oldTag}' to '${newTag}'`);
+		} catch (err) {
+			errors.push({ name: `schedule:${schedule.name}`, error: toMessage(err) });
 		}
 	}
 
 	return { success: errors.length === 0, errors };
-};
-
-const migrateRepositoryFolders = async (): Promise<MigrationResult> => {
-	const errors: Array<{ name: string; error: string }> = [];
-	const repositories = await db.query.repositoriesTable.findMany({});
-
-	for (const repo of repositories) {
-		if (repo.config.backend !== "local") {
-			continue;
-		}
-
-		const config = repo.config as Extract<RepositoryConfig, { backend: "local" }>;
-
-		if (config.isExistingRepository) {
-			logger.debug(`Skipping imported repository "${repo.name}" - folder path is user-defined`);
-			continue;
-		}
-
-		if (config.name === repo.shortId) {
-			continue;
-		}
-
-		const basePath = config.path || REPOSITORY_BASE;
-		const oldPath = path.join(basePath, config.name);
-		const newPath = path.join(basePath, repo.shortId);
-
-		const oldExists = await pathExists(oldPath);
-		const newExists = await pathExists(newPath);
-
-		if (oldExists && !newExists) {
-			try {
-				logger.info(`Migrating repository folder: ${oldPath} -> ${newPath}`);
-				await fs.rename(oldPath, newPath);
-
-				const updatedConfig: RepositoryConfig = {
-					...config,
-					name: repo.shortId,
-				};
-
-				await db
-					.update(repositoriesTable)
-					.set({
-						config: updatedConfig,
-						updatedAt: Date.now(),
-					})
-					.where(eq(repositoriesTable.id, repo.id));
-
-				logger.info(`Successfully migrated repository folder and config for "${repo.name}"`);
-			} catch (error) {
-				const errorMessage = error instanceof Error ? error.message : String(error);
-				errors.push({ name: `repository:${repo.name}`, error: errorMessage });
-			}
-		} else if (oldExists && newExists) {
-			logger.warn(
-				`Both old (${oldPath}) and new (${newPath}) paths exist for repository "${repo.name}". Manual intervention may be required.`,
-			);
-		} else if (!oldExists && !newExists) {
-			try {
-				logger.info(`Updating config.name for repository "${repo.name}" (no folder exists yet)`);
-
-				const updatedConfig: RepositoryConfig = {
-					...config,
-					name: repo.shortId,
-				};
-
-				await db
-					.update(repositoriesTable)
-					.set({
-						config: updatedConfig,
-						updatedAt: Date.now(),
-					})
-					.where(eq(repositoriesTable.id, repo.id));
-			} catch (error) {
-				const errorMessage = error instanceof Error ? error.message : String(error);
-				errors.push({ name: `repository:${repo.name}`, error: errorMessage });
-			}
-		} else if (newExists && !oldExists && config.name !== repo.shortId) {
-			try {
-				logger.info(`Folder already at new path, updating config.name for repository "${repo.name}"`);
-
-				const updatedConfig: RepositoryConfig = {
-					...config,
-					name: repo.shortId,
-				};
-
-				await db
-					.update(repositoriesTable)
-					.set({
-						config: updatedConfig,
-						updatedAt: Date.now(),
-					})
-					.where(eq(repositoriesTable.id, repo.id));
-			} catch (error) {
-				const errorMessage = error instanceof Error ? error.message : String(error);
-				errors.push({ name: `repository:${repo.name}`, error: errorMessage });
-			}
-		}
-	}
-
-	return { success: errors.length === 0, errors };
-};
-
-const pathExists = async (p: string): Promise<boolean> => {
-	try {
-		await fs.access(p);
-		return true;
-	} catch {
-		return false;
-	}
 };

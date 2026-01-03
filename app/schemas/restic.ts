@@ -17,6 +17,8 @@ export type RepositoryBackend = keyof typeof REPOSITORY_BACKENDS;
 const baseRepositoryConfigSchema = type({
 	isExistingRepository: "boolean?",
 	customPassword: "string?",
+	cacert: "string?",
+	insecureTls: "boolean?",
 });
 
 export const s3RepositoryConfigSchema = type({
@@ -77,6 +79,8 @@ export const sftpRepositoryConfigSchema = type({
 	user: "string",
 	path: "string",
 	privateKey: "string",
+	skipHostKeyCheck: "boolean = true",
+	knownHosts: "string?",
 }).and(baseRepositoryConfigSchema);
 
 export const repositoryConfigSchemaBase = s3RepositoryConfigSchema

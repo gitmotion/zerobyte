@@ -1,14 +1,20 @@
 import type { NotificationConfig } from "~/schemas/notifications";
 
-export function buildNtfyShoutrrrUrl(config: Extract<NotificationConfig, { type: "ntfy" }>): string {
+export const buildNtfyShoutrrrUrl = (config: Extract<NotificationConfig, { type: "ntfy" }>) => {
 	let shoutrrrUrl: string;
 
 	const params = new URLSearchParams();
+	const { username, password, accessToken } = config;
 
-	const auth =
-		config.username && config.password
-			? `${encodeURIComponent(config.username)}:${encodeURIComponent(config.password)}@`
-			: "";
+	let auth = "";
+
+	if (username && password) {
+		auth = `${encodeURIComponent(username)}:${encodeURIComponent(password)}@`;
+	}
+
+	if (accessToken) {
+		auth = `:${encodeURIComponent(accessToken)}@`;
+	}
 
 	if (config.serverUrl) {
 		const url = new URL(config.serverUrl);
@@ -32,4 +38,4 @@ export function buildNtfyShoutrrrUrl(config: Extract<NotificationConfig, { type:
 	}
 
 	return shoutrrrUrl;
-}
+};

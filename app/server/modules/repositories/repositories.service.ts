@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import { eq, or } from "drizzle-orm";
-import { ConflictError, InternalServerError, NotFoundError } from "http-errors-enhanced";
+import { InternalServerError, NotFoundError } from "http-errors-enhanced";
 import { db } from "../../db/db";
 import { repositoriesTable } from "../../db/schema";
 import { toMessage } from "../../utils/errors";
@@ -32,6 +32,10 @@ const encryptConfig = async (config: RepositoryConfig): Promise<RepositoryConfig
 
 	if (config.customPassword) {
 		encryptedConfig.customPassword = await cryptoUtils.sealSecret(config.customPassword);
+	}
+
+	if (config.cacert) {
+		encryptedConfig.cacert = await cryptoUtils.sealSecret(config.cacert);
 	}
 
 	switch (config.backend) {
@@ -161,7 +165,7 @@ const listSnapshots = async (id: string, backupId?: string) => {
 		let snapshots = [];
 
 		if (backupId) {
-			snapshots = await restic.snapshots(repository.config, { tags: [backupId.toString()] });
+			snapshots = await restic.snapshots(repository.config, { tags: [backupId] });
 		} else {
 			snapshots = await restic.snapshots(repository.config);
 		}
@@ -389,20 +393,45 @@ const deleteSnapshot = async (id: string, snapshotId: string) => {
 	}
 };
 
+const deleteSnapshots = async (id: string, snapshotIds: string[]) => {
+	const repository = await findRepository(id);
+
+	if (!repository) {
+		throw new NotFoundError("Repository not found");
+	}
+
+	const releaseLock = await repoMutex.acquireExclusive(repository.id, `delete:bulk`);
+	try {
+		await restic.deleteSnapshots(repository.config, snapshotIds);
+	} finally {
+		releaseLock();
+	}
+};
+
+const tagSnapshots = async (
+	id: string,
+	snapshotIds: string[],
+	tags: { add?: string[]; remove?: string[]; set?: string[] },
+) => {
+	const repository = await findRepository(id);
+
+	if (!repository) {
+		throw new NotFoundError("Repository not found");
+	}
+
+	const releaseLock = await repoMutex.acquireExclusive(repository.id, `tag:bulk`);
+	try {
+		await restic.tagSnapshots(repository.config, snapshotIds, tags);
+	} finally {
+		releaseLock();
+	}
+};
+
 const updateRepository = async (id: string, updates: { name?: string; compressionMode?: CompressionMode }) => {
 	const existing = await findRepository(id);
 
 	if (!existing) {
 		throw new NotFoundError("Repository not found");
-	}
-
-	if (
-		updates.name !== undefined &&
-		updates.name !== existing.name &&
-		existing.config.backend === "local" &&
-		existing.config.isExistingRepository
-	) {
-		throw new ConflictError("Cannot rename an imported local repository");
 	}
 
 	const newConfig = repositoryConfigSchema(existing.config);
@@ -448,4 +477,6 @@ export const repositoriesService = {
 	checkHealth,
 	doctorRepository,
 	deleteSnapshot,
+	deleteSnapshots,
+	tagSnapshots,
 };

@@ -71,6 +71,8 @@ async function encryptSensitiveFields(config: NotificationConfig): Promise<Notif
 				...config,
 				botToken: await cryptoUtils.sealSecret(config.botToken),
 			};
+		case "generic":
+			return config;
 		case "custom":
 			return {
 				...config,
@@ -118,6 +120,8 @@ async function decryptSensitiveFields(config: NotificationConfig): Promise<Notif
 				...config,
 				botToken: await cryptoUtils.resolveSecret(config.botToken),
 			};
+		case "generic":
+			return config;
 		case "custom":
 			return {
 				...config,
@@ -388,6 +392,7 @@ function buildNotificationMessage(
 				body: [
 					`Volume: ${context.volumeName}`,
 					`Repository: ${context.repositoryName}`,
+					context.scheduleName ? `Schedule: ${context.scheduleName}` : null,
 					context.duration ? `Duration: ${Math.round(context.duration / 1000)}s` : null,
 					context.filesProcessed !== undefined ? `Files: ${context.filesProcessed}` : null,
 					context.bytesProcessed ? `Size: ${context.bytesProcessed}` : null,
@@ -404,6 +409,7 @@ function buildNotificationMessage(
 				body: [
 					`Volume: ${context.volumeName}`,
 					`Repository: ${context.repositoryName}`,
+					context.scheduleName ? `Schedule: ${context.scheduleName}` : null,
 					context.duration ? `Duration: ${Math.round(context.duration / 1000)}s` : null,
 					context.filesProcessed !== undefined ? `Files: ${context.filesProcessed}` : null,
 					context.bytesProcessed ? `Size: ${context.bytesProcessed}` : null,
@@ -421,6 +427,7 @@ function buildNotificationMessage(
 				body: [
 					`Volume: ${context.volumeName}`,
 					`Repository: ${context.repositoryName}`,
+					context.scheduleName ? `Schedule: ${context.scheduleName}` : null,
 					context.error ? `Error: ${context.error}` : null,
 					`Time: ${date} - ${time}`,
 				]
@@ -431,7 +438,14 @@ function buildNotificationMessage(
 		default:
 			return {
 				title: "Backup Notification",
-				body: `Volume: ${context.volumeName}\nRepository: ${context.repositoryName}\nTime: ${date} - ${time}`,
+				body: [
+					`Volume: ${context.volumeName}`,
+					`Repository: ${context.repositoryName}`,
+					context.scheduleName ? `Schedule: ${context.scheduleName}` : null,
+					`Time: ${date} - ${time}`,
+				]
+					.filter(Boolean)
+					.join("\n"),
 			};
 	}
 }

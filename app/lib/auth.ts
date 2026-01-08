@@ -61,15 +61,16 @@ const createAuth = async (): Promise<Auth> => {
 	return _auth;
 };
 
-export const auth: Auth = {
-	get api() {
-		if (!_auth) throw new Error("Auth not initialized. Call initAuth() first.");
-		return _auth.api;
+export const auth = new Proxy(
+	{},
+	{
+		get(_, prop, receiver) {
+			if (!_auth) {
+				throw new Error("Auth not initialized. Call initAuth() first.");
+			}
+			return Reflect.get(_auth, prop, receiver);
+		},
 	},
-	get handler() {
-		if (!_auth) throw new Error("Auth not initialized. Call initAuth() first.");
-		return _auth.handler;
-	},
-} as Auth;
+) as Auth;
 
 export const initAuth = createAuth;

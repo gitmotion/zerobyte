@@ -14,6 +14,7 @@ import { notificationsService } from "../notifications/notifications.service";
 import { VolumeAutoRemountJob } from "~/server/jobs/auto-remount";
 import { cache } from "~/server/utils/cache";
 import { initAuth } from "~/lib/auth";
+import { toMessage } from "~/server/utils/errors";
 
 const ensureLatestConfigurationSchema = async () => {
 	const volumes = await db.query.volumesTable.findMany({});
@@ -52,7 +53,7 @@ export const startup = async () => {
 	});
 
 	await initAuth().catch((err) => {
-		logger.error(`Error initializing auth: ${err.message}`);
+		logger.error(`Error initializing auth: ${toMessage(err)}`);
 		throw err;
 	});
 
